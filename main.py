@@ -98,6 +98,17 @@ with open('stopwords.txt') as stop:
 words_only = [split_words(line) for line in lines]
 groups_only = [split_groups(line) for line in lines]
 groups_no_stop = [split_groups(line,stop_words) for line in lines]
+
+"""
+We have 6 meanings to interest:
+    Sense 1 =  361 occurrences (15%) - readiness to give attention 
+    Sense 2 =   11 occurrences (01%) - quality of causing attention to be given to 
+    Sense 3 =   66 occurrences (03%) - activity, etc. that one gives attention to 
+    Sense 4 =  178 occurrences (08%) - advantage, advancement or favor 
+    Sense 5 =  500 occurrences (21%) - a share in a company or business 
+    Sense 6 = 1252 occurrences (53%) - money paid for the use of money
+We create the output labels.
+"""
 labels = [int(line[line.find("_")+1]) for line in lines]
 
 #Checking whata's the longest line. Answer: 177 words

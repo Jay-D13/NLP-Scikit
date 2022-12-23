@@ -4,7 +4,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 # from nltk.stem import PorterStemmer
 # from nltk.tokenize import word_tokenize
 
-def split_words(sentence):
+def split_words(sentence, punc=True):
     """
     Function that allows us to isolate just the words 
     and punctuation in our corpus' sentences.
@@ -17,11 +17,14 @@ def split_words(sentence):
     # sentence = re.findall(r"[a-zA-Z_0-9']+/[A-Z]+|[-;',.:?!`\"]+/[-;',.:?!`\"]", sentence)
     line = re.sub("[][=]","", sentence)
     line = line.split()
-    return [word[:word.find("/")] for word in line]
+    
+    return [group[:group.find("/")] 
+            for group in line] if punc else [word for group in line 
+                                            if (word:=group[:group.find("/")]) not in "';:.,!?><}{()``''"]
 
-def split_groups(sentence, stop_words=[]):
+def split_categories(sentence, stop_words=[], punc=True):
     """
-    Function that isolates just the nominal groups of words 
+    Function that isolates just the nominal categories of words 
     and punctuation in our corpus' sentences.
 
     Args:
@@ -30,31 +33,31 @@ def split_groups(sentence, stop_words=[]):
                                          Defaults to [].
 
     Returns:
-        string[]: list of nominal groups of words corpus' sentences
+        string[]: list of nominal categories of words corpus' sentences
     """
-    groups = []
+    categories = []
     line = re.sub("[][=]","", sentence) #remove "][="
     words = line.split()
-    for word in words:
-        if word[:word.find("/")] not in stop_words:
+    for group in words:
+        if (word:=group[:group.find("/")]) not in stop_words and (word not in "';:.,!?><}{()``''" or punc):
             # "*" are in a word when the word is another occurence of "interest" we are
             # not interested in. (pun non intended)
-            if "interest" not in word or "*" in word:
+            if "interest" not in group or "*" in group:
                 #take just part of the string after the "/"
-                groups.append(word[word.find("/")+1:]) 
+                categories.append(group[group.find("/")+1:]) 
             else:
                 #we keep "interest" to be able to find its index when bagging
-                groups.append(word) 
-    return groups
+                categories.append(group) 
+    return categories
 
 
 def bag_of_words(n, lines):
     """
-    Function that returns the 'n' words/groups before and after the word "interest
+    Function that returns the 'n' words/categories before and after the word "interest
 
     Args:
         n (int): our margin
-        lines (string[]): our isolated groups/words that we want to recuperate a 'bag' from
+        lines (string[]): our isolated categories/words that we want to recuperate a 'bag' from
 
     Returns:
         string[]: the shorted 'lines' input with the 'n' surrounding words of 'interest' (excluding 'interest')
@@ -74,7 +77,7 @@ def vectorize(n, lines, stop_words=False):
 
     Args:
         n (int): our margin
-        lines (string[]): our isolated groups/words that we want to recuperate a 'bag' from
+        lines (string[]): our isolated categories/words that we want to recuperate a 'bag' from
         stop_words (bool, optional): if we want to include Scikit's integrated stopwords. 
                                      Defaults to False.
 
@@ -91,16 +94,20 @@ def vectorize(n, lines, stop_words=False):
 with open('corpus.txt') as corpus:
     lines = corpus.read().split('$$')[:-1] #Last element is just a "/n" so we remove it
     
-#we add these stopwords for the groups since Scikit's vectorized stop_words function on the groups won't work
+#we add these stopwords for the categories since Scikit's vectorized stop_words function on the categories won't work
 with open('stopwords.txt') as stop:
     stop_words = stop.read().split()
     
 words_only = [split_words(line) for line in lines]
-groups_only = [split_groups(line) for line in lines]
-groups_no_stop = [split_groups(line,stop_words) for line in lines]
+categories_only = [split_categories(line) for line in lines]
+categories_no_stop = [split_categories(line,stop_words) for line in lines]
+
+words_only_no_punc = [split_words(line, punc=False) for line in lines]
+categories_only_no_punc = [split_categories(line, punc=False) for line in lines]
+categories_no_stop_no_punc = [split_categories(line,stop_words, punc=False) for line in lines]
 
 """
-We have 6 meanings to interest:
+We have 6 meanings to 'interest':
     Sense 1 =  361 occurrences (15%) - readiness to give attention 
     Sense 2 =   11 occurrences (01%) - quality of causing attention to be given to 
     Sense 3 =   66 occurrences (03%) - activity, etc. that one gives attention to 
@@ -112,7 +119,6 @@ We create the output labels.
 labels = [int(line[line.find("_")+1]) for line in lines]
 
 #Checking whata's the longest line. Answer: 177 words
-# lengths = [len(w) for w in words_only]
 # print(max(lengths))
 
 
